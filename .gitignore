@@ -1,0 +1,12 @@
+node_modules/
+
+build/
+.idea/
+*.tsbuildinfo
+.cache/
+.env.local
+dist/
+npm-debug.log*
+.next/
+.env
+coverage/
