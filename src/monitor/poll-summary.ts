@@ -2,46 +2,58 @@ import { PollResult } from './types';
 
 export interface PollSummary {
   total: number;
-  succeeded: number;
+  success: number;
   failed: number;
-  averageDurationMs: number;
-  slowestRoute: string | null;
-  fastestRoute: string | null;
+  errors: number;
+  avgDuration: number;
+  urls: string[];
+}
+
+function isSuccess(result: PollResult): boolean {
+  return !result.error && result.status >= 200 && result.status < 300;
+}
+
+function isError(result: PollResult): boolean {
+  return !!result.error;
+}
+
+function isFailed(result: PollResult): boolean {
+  return !result.error && (result.status < 200 || result.status >= 300);
 }
 
 export function summarizePollResults(results: PollResult[]): PollSummary {
   if (results.length === 0) {
     return {
       total: 0,
-      succeeded: 0,
+      success: 0,
       failed: 0,
-      averageDurationMs: 0,
-      slowestRoute: null,
-      fastestRoute: null,
+      errors: 0,
+      avgDuration: 0,
+      urls: [],
     };
   }
 
-  const succeeded = results.filter((r) => !r.error && r.status < 400);
-  const failed = results.filter((r) => r.error || r.status >= 400);
+  const success = results.filter(isSuccess).length;
+  const failed = results.filter(isFailed).length;
+  const errors = results.filter(isError).length;
 
-  const totalDuration = succeeded.reduce((sum, r) => sum + r.durationMs, 0);
-  const averageDurationMs =
-    succeeded.length > 0 ? totalDuration / succeeded.length : 0;
+  const validDurations = results
+    .filter((r) => !r.error)
+    .map((r) => r.duration);
 
-  let slowest: PollResult | null = null;
-  let fastest: PollResult | null = null;
+  const avgDuration =
+    validDurations.length > 0
+      ? validDurations.reduce((sum, d) => sum + d, 0) / validDurations.length
+      : 0;
 
-  for (const r of succeeded) {
-    if (!slowest || r.durationMs > slowest.durationMs) slowest = r;
-    if (!fastest || r.durationMs < fastest.durationMs) fastest = r;
-  }
+  const urls = Array.from(new Set(results.map((r) => r.url)));
 
   return {
     total: results.length,
-    succeeded: succeeded.length,
-    failed: failed.length,
-    averageDurationMs: Math.round(averageDurationMs * 100) / 100,
-    slowestRoute: slowest ? slowest.route.name : null,
-    fastestRoute: fastest ? fastest.route.name : null,
+    success,
+    failed,
+    errors,
+    avgDuration,
+    urls,
   };
 }
