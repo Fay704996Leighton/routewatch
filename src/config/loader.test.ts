@@ -61,4 +61,19 @@ endpoints:
     const file = writeTmp('empty.yaml', `version: "1"\nendpoints: []`);
     expect(() => loadConfig(file)).toThrow(ConfigLoadError);
   });
+
+  it('throws ConfigLoadError for malformed JSON', () => {
+    const file = writeTmp('malformed.json', '{ "version": "1", endpoints: }');
+    expect(() => loadConfig(file)).toThrow(ConfigLoadError);
+  });
+
+  it('throws ConfigLoadError for malformed YAML', () => {
+    const file = writeTmp('malformed.yaml', `
+version: "1"
+endpoints:
+  - name: foo
+   url: https://example.com
+`);
+    expect(() => loadConfig(file)).toThrow(ConfigLoadError);
+  });
 });
