@@ -47,3 +47,14 @@ export function mergeAlerts(
     return a.endpoint.localeCompare(b.endpoint);
   });
 }
+
+/**
+ * Filters alerts to only those matching the given severity level.
+ * Useful for routing critical alerts to a different notification channel.
+ */
+export function filterAlertsBySeverity(
+  alerts: Alert[],
+  severity: AlertSeverity
+): Alert[] {
+  return alerts.filter((a) => a.severity === severity);
+}
