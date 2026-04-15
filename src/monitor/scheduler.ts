@@ -27,9 +27,27 @@ export function createScheduler(
 
   const run = async () => {
     if (stopped) return;
-    const results = await pollRoutes(routes, pollerOptions);
+
+    let results: PollResult[];
+    try {
+      results = await pollRoutes(routes, pollerOptions);
+    } catch (err) {
+      // If polling itself throws unexpectedly, log and schedule next run
+      // rather than silently stopping the scheduler.
+      console.error('[routewatch] Unexpected error during poll:', err);
+      if (!stopped) {
+        timer = setTimeout(run, intervalMs);
+      }
+      return;
+    }
+
     count++;
-    await onResults(results);
+
+    try {
+      await onResults(results);
+    } catch (err) {
+      console.error('[routewatch] Error in scheduler callback:', err);
+    }
 
     if (maxRuns !== undefined && count >= maxRuns) {
       stopped = true;
