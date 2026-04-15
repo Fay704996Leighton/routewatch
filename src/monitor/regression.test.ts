@@ -50,6 +50,16 @@ describe("detectRegression", () => {
     expect(result.reason.some((r) => r.includes("p95"))).toBe(true);
   });
 
+  it("detects both avg and p95 regression simultaneously", () => {
+    const baseline = makeBaseline(100, 150);
+    // Both avg and p95 exceed their respective thresholds
+    const results = makeResults([130, 140, 130, 140, 400]);
+    const result = detectRegression(results, baseline, config);
+    expect(result.isRegression).toBe(true);
+    expect(result.reason.some((r) => r.includes("avg duration"))).toBe(true);
+    expect(result.reason.some((r) => r.includes("p95"))).toBe(true);
+  });
+
   it("returns correct delta percentages", () => {
     const baseline = makeBaseline(200, 300);
     const results = makeResults([200, 200, 200, 200, 200]);
