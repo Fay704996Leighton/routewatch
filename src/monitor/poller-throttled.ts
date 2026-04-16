@@ -1,45 +1,46 @@
 /**
- * Throttled poller: wraps the base poller with concurrency limiting
- * so large endpoint lists don't fire all requests simultaneously.
+ * Throttled poller with retry support.
+ * Wraps the core poll logic with concurrency throttling and per-request retries.
  */
 
-import { EndpointConfig } from "../config/schema";
+import { createThrottle } from "./throttle";
+import { withRetry, RetryOptions } from "./retry";
 import { PollResult } from "./types";
-import { createThrottle, ThrottleOptions } from "./throttle";
 import { pollEndpoint } from "./poller";
+import { RouteConfig } from "../config/schema";
 
-export interface ThrottledPollOptions {
-  throttle?: Partial<ThrottleOptions>;
-  timeoutMs?: number;
+export interface ThrottledPollerOptions {
+  concurrency: number;
+  retry: RetryOptions;
 }
 
-export async function pollEndpointsThrottled(
-  endpoints: EndpointConfig[],
-  options: ThrottledPollOptions = {}
+const DEFAULT_OPTIONS: ThrottledPollerOptions = {
+  concurrency: 5,
+  retry: { attempts: 3, delayMs: 200, backoff: true },
+};
+
+export async function pollAllThrottled(
+  routes: RouteConfig[],
+  options: Partial<ThrottledPollerOptions> = {}
 ): Promise<PollResult[]> {
-  const maxConcurrent = options.throttle?.maxConcurrent ?? 5;
-  const delayMs = options.throttle?.delayMs ?? 0;
-  const timeoutMs = options.timeoutMs ?? 10_000;
+  const opts: ThrottledPollerOptions = { ...DEFAULT_OPTIONS, ...options };
+  const throttle = createThrottle(opts.concurrency);
 
-  const throttle = createThrottle({ maxConcurrent, delayMs });
-
-  const tasks = endpoints.map((endpoint) =>
-    throttle.run(() => pollEndpoint(endpoint, timeoutMs))
+  const tasks = routes.map((route) =>
+    throttle.next(() =>
+      withRetry(() => pollEndpoint(route), opts.retry).then(
+        (r) => r.value,
+        (err): PollResult => ({
+          route: route.name,
+          url: route.url,
+          status: "error",
+          error: String(err),
+          durationMs: 0,
+          timestamp: new Date().toISOString(),
+        })
+      )
+    )
   );
 
-  const results = await Promise.allSettled(tasks);
-
-  return results.map((result, i) => {
-    if (result.status === "fulfilled") {
-      return result.value;
-    }
-    // Return a failed PollResult if the throttled task itself threw
-    return {
-      endpoint: endpoints[i],
-      status: "error" as const,
-      error: result.reason instanceof Error ? result.reason.message : String(result.reason),
-      durationMs: 0,
-      timestamp: new Date().toISOString(),
-    };
-  });
+  return Promise.all(tasks);
 }
