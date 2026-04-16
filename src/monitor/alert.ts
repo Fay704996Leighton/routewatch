@@ -1,60 +1,45 @@
-import { RegressionResult } from "./regression";
-import { SchemaDriftResult } from "./schema-checker";
-
-export type AlertSeverity = "warn" | "critical";
+export type AlertType = 'regression' | 'schema-drift';
+export type AlertSeverity = 'info' | 'warning' | 'critical';
 
 export interface Alert {
   endpoint: string;
+  type: AlertType;
   severity: AlertSeverity;
-  type: "regression" | "schema-drift";
   message: string;
   timestamp: string;
 }
 
-export function buildAlertsFromRegressions(
-  regressions: RegressionResult[]
-): Alert[] {
-  return regressions.map((r) => ({
+import { RegressionResult } from './regression';
+import { SchemaDriftResult } from './schema-checker';
+
+export function buildAlertsFromRegressions(results: RegressionResult[]): Alert[] {
+  return results.map((r) => ({
     endpoint: r.endpoint,
-    severity: r.percentChange >= 100 ? "critical" : "warn",
-    type: "regression",
-    message: `Response time increased by ${r.percentChange.toFixed(1)}% (baseline: ${r.baselineAvg.toFixed(0)}ms, current: ${r.currentAvg.toFixed(0)}ms)`,
+    type: 'regression',
+    severity: r.ratio >= 2 ? 'critical' : 'warning',
+    message: `Response time regression: ${r.avgDuration}ms vs baseline ${r.baselineDuration}ms (${r.ratio.toFixed(2)}x)`,
     timestamp: new Date().toISOString(),
   }));
 }
 
-export function buildAlertsFromSchemaDrift(
-  driftResults: SchemaDriftResult[]
-): Alert[] {
-  return driftResults
-    .filter((d) => d.hasDrift)
-    .map((d) => ({
-      endpoint: d.endpoint,
-      severity: "warn" as AlertSeverity,
-      type: "schema-drift",
-      message: `Schema drift detected — added: [${d.addedKeys.join(", ")}], removed: [${d.removedKeys.join(", ")}]`,
+export function buildAlertsFromSchemaDrift(results: SchemaDriftResult[]): Alert[] {
+  return results
+    .filter((r) => r.drifted)
+    .map((r) => ({
+      endpoint: r.endpoint,
+      type: 'schema-drift',
+      severity: 'warning',
+      message: `Schema drift detected. Added: [${r.addedKeys.join(', ')}] Removed: [${r.removedKeys.join(', ')}]`,
       timestamp: new Date().toISOString(),
     }));
 }
 
-export function mergeAlerts(
-  regressionAlerts: Alert[],
-  driftAlerts: Alert[]
-): Alert[] {
-  return [...regressionAlerts, ...driftAlerts].sort((a, b) => {
-    if (a.severity === "critical" && b.severity !== "critical") return -1;
-    if (b.severity === "critical" && a.severity !== "critical") return 1;
-    return a.endpoint.localeCompare(b.endpoint);
-  });
+export function mergeAlerts(...groups: Alert[][]): Alert[] {
+  return groups.flat();
 }
 
-/**
- * Filters alerts to only those matching the given severity level.
- * Useful for routing critical alerts to a different notification channel.
- */
-export function filterAlertsBySeverity(
-  alerts: Alert[],
-  severity: AlertSeverity
-): Alert[] {
-  return alerts.filter((a) => a.severity === severity);
+export function filterAlertsBySeverity(alerts: Alert[], severity: AlertSeverity): Alert[] {
+  const order: AlertSeverity[] = ['info', 'warning', 'critical'];
+  const minIndex = order.indexOf(severity);
+  return alerts.filter((a) => order.indexOf(a.severity) >= minIndex);
 }
