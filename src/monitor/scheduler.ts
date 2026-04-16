@@ -12,6 +12,7 @@ export interface SchedulerOptions extends PollerOptions {
 export interface SchedulerHandle {
   stop: () => void;
   runCount: () => number;
+  isStopped: () => boolean;
 }
 
 export function createScheduler(
@@ -67,5 +68,6 @@ export function createScheduler(
       if (timer !== null) clearTimeout(timer);
     },
     runCount: () => count,
+    isStopped: () => stopped,
   };
 }
