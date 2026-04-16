@@ -1,52 +1,69 @@
-import type { RunOptions } from './runner';
+/**
+ * CLI argument parsing for routewatch.
+ */
 
-const USAGE = `
-Usage: routewatch [options]
+export interface CliArgs {
+  config: string;
+  output?: string;
+  format: 'text' | 'json';
+  tags: string[];
+  excludeTags: string[];
+  dryRun: boolean;
+  verbose: boolean;
+  help: boolean;
+}
 
-Options:
-  --config <path>   Path to config file (default: routewatch.json)
-  --output <path>   Write report to file
-  --silent          Suppress stdout output
-  --help            Show this help message
-`.trim();
+const DEFAULT_CONFIG = 'routewatch.config.json';
 
-export function parseArgs(argv: string[]): RunOptions {
-  if (argv.includes('--help') || argv.includes('-h')) {
-    console.log(USAGE);
-    process.exit(0);
-  }
-
-  const options: RunOptions = {
-    configPath: 'routewatch.json',
+export function parseArgs(argv: string[]): CliArgs {
+  const args = argv.slice(2);
+  const result: CliArgs = {
+    config: DEFAULT_CONFIG,
+    format: 'text',
+    tags: [],
+    excludeTags: [],
+    dryRun: false,
+    verbose: false,
+    help: false,
   };
 
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-
-    if (arg === '--config' || arg === '-c') {
-      const next = argv[i + 1];
-      if (!next || next.startsWith('--')) {
-        console.error('Error: --config requires a path argument');
-        process.exit(2);
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    switch (arg) {
+      case '--config':
+      case '-c':
+        result.config = args[++i] ?? DEFAULT_CONFIG;
+        break;
+      case '--output':
+      case '-o':
+        result.output = args[++i];
+        break;
+      case '--format':
+      case '-f': {
+        const fmt = args[++i];
+        if (fmt === 'json' || fmt === 'text') result.format = fmt;
+        break;
       }
-      options.configPath = next;
-      i++;
-    } else if (arg === '--output' || arg === '-o') {
-      const next = argv[i + 1];
-      if (!next || next.startsWith('--')) {
-        console.error('Error: --output requires a path argument');
-        process.exit(2);
-      }
-      options.outputPath = next;
-      i++;
-    } else if (arg === '--silent' || arg === '-s') {
-      options.silent = true;
-    } else {
-      console.error(`Error: unknown argument "${arg}"`);
-      console.error(USAGE);
-      process.exit(2);
+      case '--tag':
+      case '-t':
+        result.tags.push(...(args[++i]?.split(',') ?? []));
+        break;
+      case '--exclude-tag':
+        result.excludeTags.push(...(args[++i]?.split(',') ?? []));
+        break;
+      case '--dry-run':
+        result.dryRun = true;
+        break;
+      case '--verbose':
+      case '-v':
+        result.verbose = true;
+        break;
+      case '--help':
+      case '-h':
+        result.help = true;
+        break;
     }
   }
 
-  return options;
+  return result;
 }
