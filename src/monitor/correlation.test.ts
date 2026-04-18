@@ -61,6 +61,12 @@ describe("buildCorrelationReport", () => {
     const report = buildCorrelationReport(makeTrend(), health);
     report.entries.forEach((e) => expect(e.errorRate).toBe(0));
   });
+
+  it("includes generatedAt timestamp in report", () => {
+    const report = buildCorrelationReport(makeTrend(), makeHealth());
+    expect(report.generatedAt).toBeDefined();
+    expect(typeof report.generatedAt).toBe("string");
+  });
 });
 
 describe("formatCorrelationReport", () => {
@@ -69,5 +75,12 @@ describe("formatCorrelationReport", () => {
     const text = formatCorrelationReport(report);
     expect(text).toContain("HIGH");
     expect(text).toContain("LOW");
+  });
+
+  it("includes endpoint urls in output", () => {
+    const report = buildCorrelationReport(makeTrend(), makeHealth());
+    const text = formatCorrelationReport(report);
+    expect(text).toContain("https://api.example.com/fast");
+    expect(text).toContain("https://api.example.com/slow");
   });
 });
