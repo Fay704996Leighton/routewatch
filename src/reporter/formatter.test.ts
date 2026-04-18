@@ -29,6 +29,12 @@ describe('formatReport', () => {
     expect(parsed[0].endpoint).toBe('https://api.example.com/health');
   });
 
+  it('returns empty JSON array for no entries', () => {
+    const output = formatReport([], 'json');
+    const parsed = JSON.parse(output);
+    expect(parsed).toEqual([]);
+  });
+
   it('includes endpoint and timestamp in text format', () => {
     const entry = makeEntry();
     const output = formatReport([entry], 'text');
