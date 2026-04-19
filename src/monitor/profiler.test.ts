@@ -13,6 +13,10 @@ describe('percentile', () => {
     const sorted = Array.from({ length: 100 }, (_, i) => i + 1);
     expect(percentile(sorted, 95)).toBe(95);
   });
+
+  it('returns the only element for single-item array', () => {
+    expect(percentile([42], 99)).toBe(42);
+  });
 });
 
 describe('buildProfileEntry', () => {
@@ -40,6 +44,11 @@ describe('buildProfileEntry', () => {
     expect(entry.p50).toBe(250);
     expect(entry.p99).toBe(250);
   });
+
+  it('p50 is less than or equal to p99', () => {
+    const entry = buildProfileEntry('https://api.example.com/users', 'GET', durations);
+    expect(entry.p50).toBeLessThanOrEqual(entry.p99);
+  });
 });
 
 describe('buildProfileReport', () => {
@@ -52,6 +61,11 @@ describe('buildProfileReport', () => {
     const entry = buildProfileEntry('https://api.example.com/', 'GET', [100, 200]);
     const report = buildProfileReport([entry]);
     expect(report.entries).toHaveLength(1);
+  });
+
+  it('generatedAt is a valid ISO date string', () => {
+    const report = buildProfileReport([]);
+    expect(new Date(report.generatedAt).toISOString()).toBe(report.generatedAt);
   });
 });
 
