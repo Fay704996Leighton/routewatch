@@ -1,5 +1,8 @@
 import { DigestReport } from "../monitor/digest";
 
+/**
+ * Formats a single DigestReport into a human-readable summary string.
+ */
 export function formatDigestEntry(report: DigestReport): string {
   const lines: string[] = [];
   lines.push(`=== RouteWatch Digest (${report.window}) ===`);
@@ -18,10 +21,25 @@ export function formatDigestEntry(report: DigestReport): string {
   return lines.join("\n");
 }
 
+/**
+ * Formats a DigestReport into a human-readable string with a trailing newline.
+ */
 export function formatDigestReport(report: DigestReport): string {
   return formatDigestEntry(report) + "\n";
 }
 
+/**
+ * Serializes a DigestReport to a pretty-printed JSON string.
+ */
 export function digestToJson(report: DigestReport): string {
   return JSON.stringify(report, null, 2);
+}
+
+/**
+ * Formats multiple DigestReports into a single combined summary string,
+ * separating each entry with a blank line.
+ */
+export function formatDigestReports(reports: DigestReport[]): string {
+  if (reports.length === 0) return "";
+  return reports.map(formatDigestEntry).join("\n\n") + "\n";
 }
