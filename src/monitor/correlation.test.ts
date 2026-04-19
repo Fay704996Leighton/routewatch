@@ -67,6 +67,14 @@ describe("buildCorrelationReport", () => {
     expect(report.generatedAt).toBeDefined();
     expect(typeof report.generatedAt).toBe("string");
   });
+
+  it("reflects correct errorRate for each entry", () => {
+    const report = buildCorrelationReport(makeTrend(), makeHealth());
+    const slow = report.entries.find((e) => e.url.includes("slow"))!;
+    const fast = report.entries.find((e) => e.url.includes("fast"))!;
+    expect(slow.errorRate).toBeCloseTo(0.4);
+    expect(fast.errorRate).toBeCloseTo(0.01);
+  });
 });
 
 describe("formatCorrelationReport", () => {
