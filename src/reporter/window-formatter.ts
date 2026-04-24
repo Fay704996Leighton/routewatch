@@ -38,3 +38,14 @@ export function formatWindowReport(report: WindowReport): string {
 export function windowToJson(report: WindowReport): string {
   return JSON.stringify(report, null, 2);
 }
+
+/**
+ * Returns the WindowStats entry with the highest average latency,
+ * or undefined if the report contains no windows.
+ */
+export function slowestWindow(report: WindowReport): WindowStats | undefined {
+  if (report.windows.length === 0) return undefined;
+  return report.windows.reduce((worst, current) =>
+    current.avg > worst.avg ? current : worst
+  );
+}
